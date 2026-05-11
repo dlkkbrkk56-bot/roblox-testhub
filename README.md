@@ -1,125 +1,164 @@
--- Anime Vanguards - Infinite Reroll com Rejoin
--- Faz reroll -> Sai do jogo -> Entra de novo -> Rerolls restaurados
--- Pity continua contando
-
+-- SCRIPT COM SEGURANÇA - Testa antes de gastar recursos
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local playerData = player:WaitForChild("PlayerData")
 
--- ========== CONFIGURAÇÕES ==========
-local HOTKEY = Enum.KeyCode.E
-local IS_ACTIVE = false
-local REROLL_DELAY = 0.5
-local REJOIN_DELAY = 5 -- Tempo para esperar antes de entrar de novo
+local ativo = false
+local rerolls = 0
 
--- ========== FUNÇÃO PARA CLICAR NO BOTÃO REROLL ==========
-local function clickRerollButton()
-    local traitsGui = playerGui:FindFirstChild("TraitsGui")
-    if not traitsGui then
-        print("❌ TraitsGui não encontrada!")
-        return false
-    end
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RerollSafeGUI"
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 120)
+frame.Position = UDim2.new(0, 10, 0, 10)
+frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+frame.BackgroundTransparency = 0.4
+frame.Parent = screenGui
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, 0, 0, 30)
+status.Position = UDim2.new(0, 0, 0, 5)
+status.Text = "❌ INATIVO"
+status.TextColor3 = Color3.fromRGB(255, 0, 0)
+status.Parent = frame
+
+local contador = Instance.new("TextLabel")
+contador.Size = UDim2.new(1, 0, 0, 30)
+contador.Position = UDim2.new(0, 0, 0, 35)
+contador.Text = "Rerolls: 0"
+contador.TextColor3 = Color3.fromRGB(255, 255, 255)
+contador.Parent = frame
+
+local warningLabel = Instance.new("TextLabel")
+warningLabel.Size = UDim2.new(1, 0, 0, 30)
+warningLabel.Position = UDim2.new(0, 0, 0, 65)
+warningLabel.Text = "⚠️ Mantenha na tela de Traits"
+warningLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+warningLabel.TextSize = 10
+warningLabel.Parent = frame
+
+local botao = Instance.new("TextButton")
+botao.Size = UDim2.new(0, 100, 0, 30)
+botao.Position = UDim2.new(0.5, -50, 0, 95)
+botao.Text = "ATIVAR"
+botao.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+botao.Parent = frame
+
+-- Verifica se está na tela certa antes de clicar
+local function verificarTelaReroll()
+    local windows = playerGui:FindFirstChild("Windows")
+    if not windows then return false, "Janela Windows não encontrada" end
     
-    local rerollButton = nil
-    for _, child in ipairs(traitsGui:GetDescendants()) do
-        if (child:IsA("TextButton") and child.Text == "Reroll") or child.Name == "Reroll" then
-            rerollButton = child
+    local traits = windows:FindFirstChild("Traits")
+    if not traits then return false, "Janela Traits não encontrada - Abra a janela de Traits primeiro!" end
+    
+    local rerollBtn = nil
+    for _, btn in ipairs(traits:GetDescendants()) do
+        if btn:IsA("TextButton") and btn.Text:lower():find("reroll") then
+            rerollBtn = btn
             break
         end
     end
     
-    if not rerollButton or not rerollButton.Visible then
-        print("❌ Botão Reroll não encontrado!")
+    if not rerollBtn then return false, "Botão Reroll não encontrado" end
+    return true, rerollBtn
+end
+
+-- Função segura de reroll
+local function fazerReroll()
+    local sucesso, resultado = verificarTelaReroll()
+    
+    if not sucesso then
+        warn("⚠️ " .. resultado)
         return false
     end
     
-    -- Clica no botão
-    rerollButton.MouseButton1Click:Fire()
-    print("✓ Reroll executado!")
+    local rerollBtn = resultado
+    
+    -- Verifica se o botão está visível e habilitado
+    if not rerollBtn.Visible then
+        warn("⚠️ Botão Reroll não está visível")
+        return false
+    end
+    
+    print("✅ Reroll encontrado! Executando...")
+    rerollBtn.MouseButton1Click:Fire()
+    
+    -- Aguarda o reroll acontecer
+    task.wait(2)
+    
     return true
 end
 
--- ========== FUNÇÃO PARA SAIR E ENTRAR NOVAMENTE ==========
-local function rejoinGame()
-    print("🔄 Saindo do jogo...")
-    
-    -- Aguarda um pouco para o reroll ser processado
-    wait(REROLL_DELAY)
-    
-    -- Obtém informações do jogo atual
-    local placeId = game.PlaceId
-    local jobId = game.JobId
-    
-    print("⏳ Aguardando " .. REJOIN_DELAY .. " segundos antes de entrar...")
-    wait(REJOIN_DELAY)
-    
-    -- Sai do jogo
-    Players:LeaveGame()
-    
-    -- Aguarda um pouco e entra de novo no mesmo jogo
-    wait(2)
-    TeleportService:Teleport(placeId, player)
-end
-
--- ========== FUNÇÃO PRINCIPAL ==========
-local function infiniteRerollWithRejoin()
-    local rerollCount = 0
-    
-    while IS_ACTIVE do
-        -- Clica no reroll
-        if clickRerollButton() then
-            rerollCount = rerollCount + 1
-            print("📊 Rerolls executados: " .. rerollCount)
+-- Loop principal
+local function loopReroll()
+    while ativo do
+        status.Text = "🔄 PROCURANDO..."
+        status.TextColor3 = Color3.fromRGB(255, 255, 0)
+        
+        local sucesso = fazerReroll()
+        
+        if sucesso then
+            rerolls = rerolls + 1
+            contador.Text = "Rerolls: " .. rerolls
             
-            -- Rejoin
-            rejoinGame()
+            status.Text = "⏳ REJOIN EM 3s..."
+            task.wait(3)
             
-            -- Aguarda reconexão (o script continuará quando reiniciar)
-            wait(10)
+            -- Teleporta
+            TeleportService:Teleport(game.PlaceId, player)
+            break -- Sai do loop pois vai teleportar
         else
-            print("⚠️ Erro ao executar reroll!")
-            IS_ACTIVE = false
-            break
+            status.Text = "❌ ERRO - Abra a janela Traits!"
+            status.TextColor3 = Color3.fromRGB(255, 0, 0)
+            task.wait(2)
+            ativo = false
+            status.Text = "❌ INATIVO"
+            botao.Text = "ATIVAR"
+            botao.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
         end
     end
 end
 
--- ========== HOTKEY ==========
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == HOTKEY then
-        IS_ACTIVE = not IS_ACTIVE
-        
-        if IS_ACTIVE then
-            print("🚀 SCRIPT ATIVADO!")
-            print("✓ Iniciando reroll + rejoin infinito...")
-            infiniteRerollWithRejoin()
+-- Controles
+botao.MouseButton1Click:Connect(function()
+    if ativo then
+        ativo = false
+        status.Text = "❌ INATIVO"
+        status.TextColor3 = Color3.fromRGB(255, 0, 0)
+        botao.Text = "ATIVAR"
+        botao.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        -- Verifica se está na tela certa antes de ativar
+        local sucesso, msg = verificarTelaReroll()
+        if sucesso then
+            ativo = true
+            status.Text = "✅ ATIVO"
+            status.TextColor3 = Color3.fromRGB(0, 255, 0)
+            botao.Text = "DESATIVAR"
+            botao.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            loopReroll()
         else
-            print("⛔ SCRIPT DESATIVADO!")
+            status.Text = "⚠️ " .. msg
+            status.TextColor3 = Color3.fromRGB(255, 165, 0)
+            task.wait(2)
+            status.Text = "❌ INATIVO"
+            status.TextColor3 = Color3.fromRGB(255, 0, 0)
         end
     end
 end)
 
-print("=" .. string.rep("=", 60))
-print("🎮 INFINITE TRAIT REROLL COM REJOIN - SCRIPT CARREGADO")
-print("=" .. string.rep("=", 60))
-print()
-print("📋 O que o script faz:")
-print("1. Clica no botão 'Reroll'")
-print("2. Aguarda processamento do reroll")
-print("3. Sai do jogo (rejoin)")
-print("4. Entra de novo automático")
-print("5. Os rerolls voltam, MAS o Pity continua contando")
-print("6. Repete infinitamente")
-print()
-print("⚙️ CONFIGURAÇÕES:")
-print("Hotkey: " .. tostring(HOTKEY) .. " (ligar/desligar)")
-print("Delay rejoin: " .. REJOIN_DELAY .. " segundos")
-print()
-print("=" .. string.rep("=", 60))
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.E then
+        botao.MouseButton1Click:Fire()
+    end
+end)
+
+print("✅ SCRIPT SEGURO CARREGADO!")
+print("📌 IMPORTANTE: Abra a janela de TRAITS antes de ativar!")
