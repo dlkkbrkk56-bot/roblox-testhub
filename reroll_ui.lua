@@ -1,29 +1,25 @@
--- SCRIPT DE FARM DE TRAITS - PROCURA MONARCH
-local Players = game:GetService("Players")
+-- SCRIPT CORRIGIDO - Só rejoin após clicar
+local player = game.Players.LocalPlayer
 local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
 local ativo = false
 local tentativas = 0
-local TRAIT_DESEJADA = "Monarch"  -- << TRAIT QUE VOCÊ QUER
 
 -- GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "TraitFarmGUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "RerollGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 280, 0, 150)
+frame.Size = UDim2.new(0, 250, 0, 120)
 frame.Position = UDim2.new(0, 10, 0, 10)
 frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-frame.BackgroundTransparency = 0.4
+frame.BackgroundTransparency = 0.5
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(255, 215, 0)
-frame.Parent = screenGui
+frame.Parent = gui
 
 local status = Instance.new("TextLabel")
 status.Size = UDim2.new(1, 0, 0, 35)
@@ -45,18 +41,9 @@ tentativasLabel.TextSize = 14
 tentativasLabel.Font = Enum.Font.Gotham
 tentativasLabel.Parent = frame
 
-local alvoLabel = Instance.new("TextLabel")
-alvoLabel.Size = UDim2.new(1, 0, 0, 25)
-alvoLabel.Position = UDim2.new(0, 0, 0, 85)
-alvoLabel.BackgroundTransparency = 1
-alvoLabel.Text = "🎯 Procurando: MONARCH"
-alvoLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-alvoLabel.TextSize = 12
-alvoLabel.Parent = frame
-
 local botao = Instance.new("TextButton")
 botao.Size = UDim2.new(0, 120, 0, 35)
-botao.Position = UDim2.new(0.5, -60, 0, 115)
+botao.Position = UDim2.new(0.5, -60, 0, 90)
 botao.Text = "🔴 INICIAR"
 botao.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 botao.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -65,114 +52,68 @@ botao.Font = Enum.Font.GothamBold
 botao.BorderSizePixel = 0
 botao.Parent = frame
 
--- FUNÇÃO PARA VERIFICAR SE APARECEU MONARCH
-local function verificarTrait()
-    local windows = playerGui:FindFirstChild("Windows")
-    if not windows then return false end
+-- FUNÇÃO PARA CLICAR NO REROLL
+local function clicarReroll()
+    local windows = player.PlayerGui:FindFirstChild("Windows")
+    if not windows then 
+        status.Text = "❌ Janela Windows não encontrada"
+        return false 
+    end
     
     local traits = windows:FindFirstChild("Traits")
-    if not traits then return false end
+    if not traits then 
+        status.Text = "❌ Abra a janela TRAITS!"
+        return false 
+    end
     
-    -- Procura o texto da trait atual
-    local textoEncontrado = nil
-    
-    local function buscarTexto(objeto)
-        for _, filho in ipairs(objeto:GetChildren()) do
-            if filho:IsA("TextLabel") or filho:IsA("TextButton") then
-                if filho.Text and (string.find(filho.Text, "Monarch") or string.find(filho.Text, "MONARCH")) then
-                    textoEncontrado = filho.Text
-                    return true
-                end
-            end
-            if buscarTexto(filho) then
+    -- Procura o botão Reroll
+    for _, b in ipairs(traits:GetDescendants()) do
+        if (b:IsA("ImageButton") or b:IsA("TextButton")) and b.Name and b.Name:lower() == "reroll" then
+            if b.Visible then
+                b.MouseButton1Click:Fire()
+                print("✅ Clicou no Reroll!")
                 return true
             end
         end
-        return false
     end
     
-    buscarTexto(traits)
-    
-    if textoEncontrado then
-        print("🎉 TRAIT ENCONTRADA: " .. textoEncontrado)
-        return true
-    end
+    status.Text = "🔴 Selecione uma UNIDADE primeiro!"
     return false
 end
 
--- FUNÇÃO PARA CLICAR NO REROLL
-local function clicarReroll()
-    local windows = playerGui:FindFirstChild("Windows")
-    if not windows then return false end
-    
-    local traits = windows:FindFirstChild("Traits")
-    if not traits then return false end
-    
-    local rerollBtn = nil
-    
-    local function buscarBotao(objeto)
-        for _, filho in ipairs(objeto:GetChildren()) do
-            if (filho:IsA("ImageButton") or filho:IsA("TextButton")) and filho.Name and filho.Name:lower() == "reroll" then
-                rerollBtn = filho
-                return true
-            end
-            if buscarBotao(filho) then
-                return true
-            end
-        end
-        return false
-    end
-    
-    buscarBotao(traits)
-    
-    if not rerollBtn or not rerollBtn.Visible then
-        return false
-    end
-    
-    rerollBtn.MouseButton1Click:Fire()
-    task.wait(1) -- Aguarda o resultado do reroll
-    return true
-end
-
--- LOOP PRINCIPAL
-local function loopBuscarMonarch()
+-- LOOP PRINCIPAL (SÓ REJOIN DEPOIS DE CLICAR)
+local function loopReroll()
     while ativo do
-        status.Text = "🟡 TESTANDO REROLL..."
-        status.TextColor3 = Color3.fromRGB(255, 200, 0)
-        
-        -- Clica no reroll
-        if clicarReroll() then
-            tentativas = tentativas + 1
-            tentativasLabel.Text = "🎲 Tentativas: " .. tentativas
-            
-            -- Espera aparecer a nova trait
-            task.wait(1.5)
-            
-            -- Verifica se achou Monarch
-            if verificarTrait() then
-                -- ACHOU! Para o script e avisa
-                status.Text = "🎉 MONARCH ENCONTRADA! 🎉"
-                status.TextColor3 = Color3.fromRGB(0, 255, 0)
-                alvoLabel.Text = "✅ MONARCH ENCONTRADA! Script parou."
-                print("🎉🎉🎉 TRAIT MONARCH ENCONTRADA! 🎉🎉🎉")
-                ativo = false
-                botao.Text = "🔴 INICIAR"
-                botao.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-                break
-            else
-                -- Não achou -> REJOIN para voltar com os mesmos rerolls
-                status.Text = "🔄 NÃO FOI MONARCH - REJOIN..."
-                status.TextColor3 = Color3.fromRGB(255, 100, 0)
-                task.wait(1)
-                
-                -- Dá rejoin (volta com os mesmos rerolls)
-                TeleportService:Teleport(game.PlaceId, player)
-                break -- Sai do loop pois vai teleportar
-            end
-        else
-            status.Text = "❌ Abra TRAITS e selecione unidade!"
+        -- Verifica se está na tela certa
+        local windows = player.PlayerGui:FindFirstChild("Windows")
+        if not windows or not windows:FindFirstChild("Traits") then
+            status.Text = "❌ Abra a janela TRAITS"
             status.TextColor3 = Color3.fromRGB(255, 0, 0)
             task.wait(2)
+        else
+            status.Text = "🟡 PRONTO PARA REROLLAR..."
+            status.TextColor3 = Color3.fromRGB(255, 200, 0)
+            
+            -- TENTA CLICAR NO REROLL
+            local clicou = clicarReroll()
+            
+            if clicou then
+                tentativas = tentativas + 1
+                tentativasLabel.Text = "🎲 Tentativas: " .. tentativas
+                
+                -- SÓ DÁ REJOIN SE CLICOU!
+                status.Text = "🔄 REJOIN EM 1s..."
+                status.TextColor3 = Color3.fromRGB(0, 255, 255)
+                task.wait(1)
+                
+                print("🔄 Dando rejoin após " .. tentativas .. " tentativas")
+                TeleportService:Teleport(game.PlaceId, player)
+                break -- Sai do loop porque vai teleportar
+            else
+                -- Não clicou: espera e tenta de novo (SEM REJOIN)
+                status.TextColor3 = Color3.fromRGB(255, 0, 0)
+                task.wait(2)
+            end
         end
     end
 end
@@ -182,20 +123,18 @@ local function alternar()
     ativo = not ativo
     
     if ativo then
-        status.Text = "🟢 PROCURANDO MONARCH..."
+        status.Text = "🟢 ATIVO - Pronto!"
         status.TextColor3 = Color3.fromRGB(0, 255, 0)
         botao.Text = "🔴 PARAR"
         botao.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        alvoLabel.Text = "🎯 Procurando: MONARCH"
         tentativas = 0
         tentativasLabel.Text = "🎲 Tentativas: 0"
-        loopBuscarMonarch()
+        loopReroll()
     else
         status.Text = "❌ PARADO"
         status.TextColor3 = Color3.fromRGB(255, 50, 50)
         botao.Text = "🔴 INICIAR"
         botao.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        alvoLabel.Text = "⚠️ Script parado"
     end
 end
 
@@ -209,12 +148,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("=" .. string.rep("=", 60))
-print("🎯 SCRIPT DE FARM DE TRAITS - PROCURANDO MONARCH")
-print("=" .. string.rep("=", 60))
-print("📌 COMO FUNCIONA:")
-print("   1. Abra a janela TRAITS e selecione uma unidade")
-print("   2. Ative o script (E ou botão)")
-print("   3. Ele vai clicar em REROLL")
-print("   4. Se NÃO for MONARCH -> REJOIN (rerolls voltam)")
-print("   5. Se for MONARCH -> Para automaticamente!")
+print("✅ SCRIPT CORRIGIDO!")
+print("📌 SÓ DÁ REJOIN DEPOIS QUE CLICAR NO REROLL")
 print("=" .. string.rep("=", 60))
