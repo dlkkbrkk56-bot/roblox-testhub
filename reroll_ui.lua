@@ -1,4 +1,4 @@
--- SCRIPT REROLL INFINITO - VERSÃO DEFINITIVA
+-- SCRIPT REROLL - VERSÃO SEM ERROS
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
@@ -64,9 +64,8 @@ botao.Font = Enum.Font.GothamBold
 botao.BorderSizePixel = 0
 botao.Parent = frame
 
--- FUNÇÃO CORRIGIDA - Acha o botão Reroll
+-- FUNÇÃO CORRIGIDA - Só procura botões com Text
 local function clicarReroll()
-    -- Procura a janela Traits
     local windows = playerGui:FindFirstChild("Windows")
     if not windows then 
         dica.Text = "❌ Janela Windows não encontrada"
@@ -79,26 +78,30 @@ local function clicarReroll()
         return false 
     end
     
-    -- Procura o botão Reroll (baseado no seu print)
     local rerollBtn = nil
     
-    -- Busca em todos os lugares da janela Traits
+    -- Busca apenas por TextButton (que tem texto)
     local function buscarBotao(objeto)
         for _, filho in ipairs(objeto:GetChildren()) do
-            -- Verifica se é um botão (ImageButton ou TextButton)
-            if filho:IsA("ImageButton") or filho:IsA("TextButton") then
+            -- Só procura em TextButton (ImageButton não tem Text)
+            if filho:IsA("TextButton") then
                 -- Pelo nome
                 if filho.Name and filho.Name:lower() == "reroll" then
                     rerollBtn = filho
                     return true
                 end
-                -- Pelo texto (se tiver)
+                -- Pelo texto
                 if filho.Text and filho.Text:lower() == "reroll" then
                     rerollBtn = filho
                     return true
                 end
             end
-            -- Verifica filhos
+            -- Também procura ImageButton pelo nome (sem verificar Text)
+            if filho:IsA("ImageButton") and filho.Name and filho.Name:lower() == "reroll" then
+                rerollBtn = filho
+                return true
+            end
+            
             if buscarBotao(filho) then
                 return true
             end
@@ -118,7 +121,6 @@ local function clicarReroll()
         return false
     end
     
-    -- Clica!
     dica.Text = "🎯 Rerollando..."
     print("✅ Clicou no botão Reroll!")
     rerollBtn.MouseButton1Click:Fire()
@@ -141,7 +143,6 @@ local function loopReroll()
             dica.Text = "✅ Reroll " .. rerolls .. " concluído!"
             task.wait(3)
             
-            -- Teleporta de volta
             TeleportService:Teleport(game.PlaceId, player)
             break
         else
@@ -181,10 +182,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("✅ SCRIPT CARREGADO!")
-print("=" .. string.rep("=", 50))
-print("📌 COMO USAR:")
-print("1. Abra a janela TRAITS")
-print("2. CLIQUE em uma UNIDADE")
-print("3. Pressione E ou clique em ATIVAR")
-print("=" .. string.rep("=", 50))
+print("✅ SCRIPT CORRIGIDO CARREGADO!")
+print("📌 Abra TRAITS -> Selecione UNIDADE -> Pressione E")
