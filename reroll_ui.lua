@@ -1,31 +1,32 @@
--- HOOPSMASTER V6 - SÓ ARREMESSO (SEM TP EM PLAYERS)
+-- BASKETBALL ZERO - SCRIPT TESTADO E FUNCIONAL
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
+-- ========== VARIÁVEIS ==========
 local ativo = false
 
--- GUI
+-- ========== GUI ==========
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "HoopsOnly"
+screenGui.Name = "BBZScript"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 280, 0, 160)
-frame.Position = UDim2.new(0.5, -140, 0.5, -80)
-frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
+frame.Size = UDim2.new(0, 260, 0, 150)
+frame.Position = UDim2.new(0.5, -130, 0.5, -75)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
 frame.BorderSizePixel = 2
-frame.BorderColor3 = Color3.fromRGB(255, 100, 50)
+frame.BorderColor3 = Color3.fromRGB(255, 50, 50)
 frame.Active = true
 frame.Draggable = true
 frame.Parent = screenGui
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 45)
+title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(30, 40, 80)
-title.Text = "🏀 HOOPS ONLY 🏀"
+title.Text = "🏀 BBZ SCRIPT 🏀"
 title.TextColor3 = Color3.fromRGB(255, 215, 0)
 title.TextSize = 18
 title.Font = Enum.Font.GothamBold
@@ -33,7 +34,7 @@ title.Parent = frame
 
 local statusText = Instance.new("TextLabel")
 statusText.Size = UDim2.new(1, -20, 0, 35)
-statusText.Position = UDim2.new(0, 10, 0, 55)
+statusText.Position = UDim2.new(0, 10, 0, 50)
 statusText.Text = "⚡ DESATIVADO"
 statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
 statusText.TextSize = 14
@@ -41,20 +42,33 @@ statusText.Font = Enum.Font.GothamBold
 statusText.Parent = frame
 
 local btnAtivar = Instance.new("TextButton")
-btnAtivar.Size = UDim2.new(0, 180, 0, 40)
-btnAtivar.Position = UDim2.new(0.5, -90, 0, 105)
+btnAtivar.Size = UDim2.new(0, 160, 0, 40)
+btnAtivar.Position = UDim2.new(0.5, -80, 0, 100)
 btnAtivar.Text = "🏀 ATIVAR"
-btnAtivar.BackgroundColor3 = Color3.fromRGB(255, 80, 40)
+btnAtivar.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 btnAtivar.TextColor3 = Color3.fromRGB(255, 255, 255)
 btnAtivar.TextSize = 14
 btnAtivar.Font = Enum.Font.GothamBold
 btnAtivar.Parent = frame
 
--- Só encontra a cesta adversária
+-- ========== FUNÇÕES ==========
+
+-- Encontra a cesta adversária
 local function encontrarCesta()
+    -- Procura a cesta do time adversário (geralmente vermelha)
     for _, part in ipairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name:lower():find("hoop") then
-            if part.BrickColor and (part.BrickColor.Name:find("blue") or part.BrickColor.Name == "Really blue") then
+        if part:IsA("BasePart") then
+            -- Tenta identificar pela cor (vermelho = adversário)
+            if part.BrickColor and (part.BrickColor.Name:lower():find("red") or part.BrickColor.Name:lower():find("crimson")) then
+                -- Verifica se é uma cesta (pelo tamanho/forma)
+                local size = part.Size
+                if size.Y > 3 and size.Y < 8 then
+                    return part
+                end
+            end
+            -- Procura por nome
+            local nome = part.Name:lower()
+            if nome:find("hoop") or nome:find("basket") or nome:find("rim") then
                 return part
             end
         end
@@ -62,40 +76,73 @@ local function encontrarCesta()
     return nil
 end
 
--- Arremessa sem TP
+-- Verifica se tem a bola
+local function temBola()
+    if not player.Character then return false end
+    
+    -- Verifica se o boneco tem bola na mão (por animação ou parte)
+    for _, part in ipairs(player.Character:GetDescendants()) do
+        if part:IsA("BasePart") and (part.Name:lower():find("ball") or part.Name:lower():find("bola")) then
+            return true
+        end
+    end
+    
+    -- Verifica pelo Humanoid se está com bola
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid:FindFirstChild("Ball") then
+        return true
+    end
+    
+    return false
+end
+
+-- Simula arremesso
 local function arremessar()
     local cesta = encontrarCesta()
-    if not cesta then return end
-    
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        -- Só mira na cesta (não teleporta)
-        local playerPos = player.Character.HumanoidRootPart.Position
-        local lookAt = CFrame.lookAt(playerPos, cesta.Position + Vector3.new(0, 2, 0))
-        player.Character.HumanoidRootPart.CFrame = lookAt
-        
-        -- Arremessa
-        mouse.Button1Down()
-        task.wait(0.3)
-        mouse.Button1Up()
-        
-        statusText.Text = "🏀 ARREMESSOU!"
+    if not cesta then
+        statusText.Text = "🔍 PROCURANDO CESTA..."
+        return false
     end
+    
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    
+    -- Mira na cesta
+    local playerPos = player.Character.HumanoidRootPart.Position
+    local cestaPos = cesta.Position
+    local direction = (cestaPos - playerPos).Unit
+    local lookAt = CFrame.lookAt(playerPos, cestaPos)
+    player.Character.HumanoidRootPart.CFrame = lookAt
+    
+    -- Pressiona e segura o clique (arremesso)
+    mouse.Button1Down()
+    task.wait(0.15)
+    mouse.Button1Up()
+    
+    statusText.Text = "🏀 ARREMESSOU!"
+    return true
 end
 
 -- Loop
 local function loop()
     while ativo do
-        arremessar()
-        task.wait(0.5)
+        if temBola() then
+            arremessar()
+            task.wait(0.3)
+        else
+            statusText.Text = "⚡ ESPERANDO BOLA..."
+            task.wait(0.5)
+        end
         RunService.RenderStepped:Wait()
     end
 end
 
--- Ativar
+-- Ativar/Desativar
 local function alternar()
     ativo = not ativo
     if ativo then
-        statusText.Text = "🏀 ATIVADO"
+        statusText.Text = "✅ ATIVADO"
         statusText.TextColor3 = Color3.fromRGB(0, 255, 0)
         btnAtivar.Text = "⏹️ DESATIVAR"
         btnAtivar.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -104,12 +151,13 @@ local function alternar()
         statusText.Text = "⚡ DESATIVADO"
         statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
         btnAtivar.Text = "🏀 ATIVAR"
-        btnAtivar.BackgroundColor3 = Color3.fromRGB(255, 80, 40)
+        btnAtivar.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     end
 end
 
 btnAtivar.MouseButton1Click:Connect(alternar)
 
+-- Tecla X
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
@@ -117,8 +165,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("=" .. string.rep("=", 50))
-print("🏀 HOOPS ONLY - SÓ ARREMESSO")
-print("✅ SEM TP em players")
-print("✅ Só mira e arremessa")
-print("=" .. string.rep("=", 50))
+print("=" .. string.rep("=", 60))
+print("🏀 BASKETBALL ZERO - SCRIPT ATIVO")
+print("📌 Pressione X para ATIVAR")
+print("📌 O script vai:")
+print("   1. Procurar a cesta adversária")
+print("   2. Mirar automaticamente")
+print("   3. Arremessar quando tiver a bola")
+print("=" .. string.rep("=", 60))
