@@ -1,236 +1,190 @@
--- Anime Vanguards - Infinite Reroll com Interface Visual
--- SCRIPT CORRIGIDO
-
+-- SCRIPT REROLL INFINITO - VERSÃO DEFINITIVA
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ========== VARIÁVEIS GLOBAIS ==========
-local HOTKEY = Enum.KeyCode.E
-local IS_ACTIVE = false
-local REROLL_COUNT = 0
-local REROLL_SPEED = 0.5
-local scriptGui = nil
-local statusLabel = nil
-local counterLabel = nil
-local toggleButton = nil
-local rerollCoroutine = nil
+local ativo = false
+local rerolls = 0
 
--- ========== FUNÇÃO PARA CRIAR INTERFACE ==========
-local function createInterface()
-    -- Cria ScreenGui
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "RerollScriptUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = playerGui
-    
-    -- Frame principal
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 300, 0, 200)
-    mainFrame.Position = UDim2.new(0, 20, 0, 20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
-    mainFrame.BorderColor3 = Color3.fromRGB(100, 150, 255)
-    mainFrame.BorderSizePixel = 2
-    mainFrame.Parent = screenGui
-    
-    -- Título
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
-    titleLabel.BackgroundColor3 = Color3.fromRGB(30, 60, 120)
-    titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-    titleLabel.TextSize = 14
-    titleLabel.Text = "🎮 REROLL INFINITO"
-    titleLabel.BorderSizePixel = 0
-    titleLabel.Parent = mainFrame
-    
-    -- Status Label
-    statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "Status"
-    statusLabel.Size = UDim2.new(1, -10, 0, 25)
-    statusLabel.Position = UDim2.new(0, 5, 0, 35)
-    statusLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
-    statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-    statusLabel.TextSize = 12
-    statusLabel.Text = "⛔ INATIVO"
-    statusLabel.BorderSizePixel = 0
-    statusLabel.Parent = mainFrame
-    
-    -- Counter Label
-    counterLabel = Instance.new("TextLabel")
-    counterLabel.Name = "Counter"
-    counterLabel.Size = UDim2.new(1, -10, 0, 25)
-    counterLabel.Position = UDim2.new(0, 5, 0, 65)
-    counterLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
-    counterLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    counterLabel.TextSize = 12
-    counterLabel.Text = "📊 Rerolls: 0"
-    counterLabel.BorderSizePixel = 0
-    counterLabel.Parent = mainFrame
-    
-    -- Botão ON/OFF
-    toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(1, -10, 0, 35)
-    toggleButton.Position = UDim2.new(0, 5, 0, 95)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.TextSize = 12
-    toggleButton.Text = "LIGAR SCRIPT"
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Parent = mainFrame
-    
-    -- Efeito hover no botão
-    toggleButton.MouseEnter:Connect(function()
-        toggleButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    end)
-    
-    toggleButton.MouseLeave:Connect(function()
-        if IS_ACTIVE then
-            toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        else
-            toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    end)
-    
-    toggleButton.MouseButton1Click:Connect(function()
-        IS_ACTIVE = not IS_ACTIVE
-        updateUI()
-        
-        if IS_ACTIVE then
-            if rerollCoroutine then
-                task.cancel(rerollCoroutine)
-            end
-            rerollCoroutine = task.spawn(infiniteRerollWithRejoin)
-        end
-    end)
-    
-    scriptGui = screenGui
-    return screenGui
-end
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RerollGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
--- ========== FUNÇÃO PARA ATUALIZAR INTERFACE ==========
-function updateUI()
-    if statusLabel then
-        if IS_ACTIVE then
-            statusLabel.TextColor3 = Color3.fromRGB(50, 200, 50)
-            statusLabel.Text = "✅ ATIVO"
-            if toggleButton then
-                toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-                toggleButton.Text = "DESLIGAR SCRIPT"
-            end
-        else
-            statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            statusLabel.Text = "⛔ INATIVO"
-            if toggleButton then
-                toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-                toggleButton.Text = "LIGAR SCRIPT"
-            end
-        end
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 130)
+frame.Position = UDim2.new(0, 10, 0, 10)
+frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+frame.BackgroundTransparency = 0.4
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 100, 100)
+frame.Parent = screenGui
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, 0, 0, 35)
+status.Position = UDim2.new(0, 0, 0, 5)
+status.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+status.Text = "❌ INATIVO"
+status.TextColor3 = Color3.fromRGB(255, 50, 50)
+status.TextSize = 14
+status.Font = Enum.Font.GothamBold
+status.Parent = frame
+
+local contador = Instance.new("TextLabel")
+contador.Size = UDim2.new(1, 0, 0, 35)
+contador.Position = UDim2.new(0, 0, 0, 45)
+contador.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+contador.Text = "🎲 Rerolls: 0"
+contador.TextColor3 = Color3.fromRGB(100, 255, 100)
+contador.TextSize = 14
+contador.Font = Enum.Font.Gotham
+contador.Parent = frame
+
+local dica = Instance.new("TextLabel")
+dica.Size = UDim2.new(1, 0, 0, 25)
+dica.Position = UDim2.new(0, 0, 0, 85)
+dica.BackgroundTransparency = 1
+dica.Text = "⚠️ Selecione uma unidade antes"
+dica.TextColor3 = Color3.fromRGB(255, 200, 100)
+dica.TextSize = 11
+dica.Parent = frame
+
+local botao = Instance.new("TextButton")
+botao.Size = UDim2.new(0, 120, 0, 35)
+botao.Position = UDim2.new(0.5, -60, 0, 108)
+botao.Text = "🔴 ATIVAR"
+botao.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+botao.TextColor3 = Color3.fromRGB(255, 255, 255)
+botao.TextSize = 14
+botao.Font = Enum.Font.GothamBold
+botao.BorderSizePixel = 0
+botao.Parent = frame
+
+-- FUNÇÃO CORRIGIDA - Acha o botão Reroll
+local function clicarReroll()
+    -- Procura a janela Traits
+    local windows = playerGui:FindFirstChild("Windows")
+    if not windows then 
+        dica.Text = "❌ Janela Windows não encontrada"
+        return false 
     end
     
-    if counterLabel then
-        counterLabel.Text = "📊 Rerolls: " .. REROLL_COUNT
+    local traits = windows:FindFirstChild("Traits")
+    if not traits then 
+        dica.Text = "❌ Abra a janela TRAITS!"
+        return false 
     end
-end
-
--- ========== FUNÇÃO PARA CLICAR NO REROLL ==========
-local function clickRerollButton()
-    local success, result = pcall(function()
-        local windows = playerGui:FindFirstChild("Windows")
-        if not windows then return false end
-        
-        local crafting = windows:FindFirstChild("Crafting")
-        if not crafting then return false end
-        
-        local holder = crafting:FindFirstChild("Holder")
-        if not holder then return false end
-        
-        local rerollButton = holder:FindFirstChild("Reroll")
-        if not rerollButton then
-            for _, child in ipairs(holder:GetDescendants()) do
-                if child:IsA("TextButton") and child.Text == "Reroll" then
-                    rerollButton = child
-                    break
+    
+    -- Procura o botão Reroll (baseado no seu print)
+    local rerollBtn = nil
+    
+    -- Busca em todos os lugares da janela Traits
+    local function buscarBotao(objeto)
+        for _, filho in ipairs(objeto:GetChildren()) do
+            -- Verifica se é um botão (ImageButton ou TextButton)
+            if filho:IsA("ImageButton") or filho:IsA("TextButton") then
+                -- Pelo nome
+                if filho.Name and filho.Name:lower() == "reroll" then
+                    rerollBtn = filho
+                    return true
+                end
+                -- Pelo texto (se tiver)
+                if filho.Text and filho.Text:lower() == "reroll" then
+                    rerollBtn = filho
+                    return true
                 end
             end
+            -- Verifica filhos
+            if buscarBotao(filho) then
+                return true
+            end
         end
-        
-        if not rerollButton or not rerollButton.Visible then
-            return false
-        end
-        
-        rerollButton.MouseButton1Click:Fire()
-        return true
-    end)
-    
-    if success then
-        return result or false
-    else
         return false
     end
+    
+    buscarBotao(traits)
+    
+    if not rerollBtn then
+        dica.Text = "🔴 Selecione uma UNIDADE primeiro!"
+        return false
+    end
+    
+    if not rerollBtn.Visible then
+        dica.Text = "🔴 Botão não está visível!"
+        return false
+    end
+    
+    -- Clica!
+    dica.Text = "🎯 Rerollando..."
+    print("✅ Clicou no botão Reroll!")
+    rerollBtn.MouseButton1Click:Fire()
+    task.wait(2)
+    return true
 end
 
--- ========== FUNÇÃO PARA REJOIN (CORRIGIDA) ==========
-local function rejoinGame()
-    task.wait(1)  -- Usando task.wait ao invés de wait
-    local placeId = game.PlaceId
-    TeleportService:Teleport(placeId, player)
-end
-
--- ========== LOOP INFINITO (CORRIGIDO) ==========
-local function infiniteRerollWithRejoin()
-    while IS_ACTIVE do
-        local clicked = clickRerollButton()
+-- Loop principal
+local function loopReroll()
+    while ativo do
+        status.Text = "🟡 PROCURANDO..."
+        status.TextColor3 = Color3.fromRGB(255, 200, 0)
         
-        if clicked then
-            REROLL_COUNT = REROLL_COUNT + 1
-            updateUI()
-            rejoinGame()
-            task.wait(15)  -- Usando task.wait
-        else
-            print("❌ Botão Reroll não encontrado!")
-            IS_ACTIVE = false
-            updateUI()
+        if clicarReroll() then
+            rerolls = rerolls + 1
+            contador.Text = "🎲 Rerolls: " .. rerolls
+            
+            status.Text = "🟢 REJOIN EM 3s"
+            status.TextColor3 = Color3.fromRGB(0, 255, 0)
+            dica.Text = "✅ Reroll " .. rerolls .. " concluído!"
+            task.wait(3)
+            
+            -- Teleporta de volta
+            TeleportService:Teleport(game.PlaceId, player)
             break
+        else
+            status.Text = "🔴 SELECIONE UNIDADE!"
+            status.TextColor3 = Color3.fromRGB(255, 0, 0)
+            task.wait(2)
         end
     end
 end
 
--- ========== HOTKEY ==========
+-- Liga/Desliga
+local function alternar()
+    ativo = not ativo
+    
+    if ativo then
+        status.Text = "🟢 ATIVO"
+        status.TextColor3 = Color3.fromRGB(0, 255, 0)
+        botao.Text = "🔴 DESATIVAR"
+        botao.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        dica.Text = "✅ Rodando... mantenha a tela"
+        loopReroll()
+    else
+        status.Text = "🔴 INATIVO"
+        status.TextColor3 = Color3.fromRGB(255, 50, 50)
+        botao.Text = "🟢 ATIVAR"
+        botao.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        dica.Text = "⚠️ Selecione uma unidade antes"
+    end
+end
+
+botao.MouseButton1Click:Connect(alternar)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    
-    if input.KeyCode == HOTKEY then
-        IS_ACTIVE = not IS_ACTIVE
-        updateUI()
-        
-        if IS_ACTIVE then
-            if rerollCoroutine then
-                task.cancel(rerollCoroutine)
-            end
-            rerollCoroutine = task.spawn(infiniteRerollWithRejoin)
-        end
+    if input.KeyCode == Enum.KeyCode.E then
+        alternar()
     end
 end)
 
--- ========== INICIALIZAÇÃO ==========
-createInterface()
-updateUI()
-
-print("\n" .. string.rep("=", 70))
-print("✅ SCRIPT CARREGADO COM SUCESSO!")
-print("=" .. string.rep("=", 70))
-print("\n📋 INSTRUÇÕES:")
-print("1. Uma interface aparecerá no canto superior esquerdo")
-print("2. Clique no botão ou pressione E para ligar/desligar")
-print("3. Mantenha a janela de Traits aberta")
-print("4. O script fará reroll -> rejoin -> reroll...")
-print("\n⌨️ Hotkey: E")
-print("=" .. string.rep("=", 70) .. "\n")
+print("✅ SCRIPT CARREGADO!")
+print("=" .. string.rep("=", 50))
+print("📌 COMO USAR:")
+print("1. Abra a janela TRAITS")
+print("2. CLIQUE em uma UNIDADE")
+print("3. Pressione E ou clique em ATIVAR")
+print("=" .. string.rep("=", 50))
