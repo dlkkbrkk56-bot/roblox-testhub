@@ -1,164 +1,88 @@
--- SCRIPT COM SEGURANÇA - Testa antes de gastar recursos
-local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local UserInputService = game:GetService("UserInputService")
+-- SCRIPT REROLL - VERSÃO FINAL CORRIGIDA
+loadstring(game:HttpGet("https://pastebin.com/raw/SEU_LINK"))()
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
+-- Ou use este código direto:
+local player = game.Players.LocalPlayer
 local ativo = false
 local rerolls = 0
 
 -- GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RerollSafeGUI"
-screenGui.Parent = playerGui
+local gui = Instance.new("ScreenGui")
+gui.Parent = player.PlayerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 120)
+frame.Size = UDim2.new(0, 200, 0, 100)
 frame.Position = UDim2.new(0, 10, 0, 10)
-frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-frame.BackgroundTransparency = 0.4
-frame.Parent = screenGui
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+frame.BackgroundTransparency = 0.5
+frame.Parent = gui
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, 0, 0, 30)
-status.Position = UDim2.new(0, 0, 0, 5)
+status.Size = UDim2.new(1,0,0,30)
+status.Position = UDim2.new(0,0,0,5)
 status.Text = "❌ INATIVO"
-status.TextColor3 = Color3.fromRGB(255, 0, 0)
+status.TextColor3 = Color3.fromRGB(255,0,0)
 status.Parent = frame
 
-local contador = Instance.new("TextLabel")
-contador.Size = UDim2.new(1, 0, 0, 30)
-contador.Position = UDim2.new(0, 0, 0, 35)
-contador.Text = "Rerolls: 0"
-contador.TextColor3 = Color3.fromRGB(255, 255, 255)
-contador.Parent = frame
+local count = Instance.new("TextLabel")
+count.Size = UDim2.new(1,0,0,30)
+count.Position = UDim2.new(0,0,0,35)
+count.Text = "Rerolls: 0"
+count.TextColor3 = Color3.fromRGB(255,255,255)
+count.Parent = frame
 
-local warningLabel = Instance.new("TextLabel")
-warningLabel.Size = UDim2.new(1, 0, 0, 30)
-warningLabel.Position = UDim2.new(0, 0, 0, 65)
-warningLabel.Text = "⚠️ Mantenha na tela de Traits"
-warningLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-warningLabel.TextSize = 10
-warningLabel.Parent = frame
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0,100,0,30)
+btn.Position = UDim2.new(0.5,-50,0,70)
+btn.Text = "ATIVAR"
+btn.Parent = frame
 
-local botao = Instance.new("TextButton")
-botao.Size = UDim2.new(0, 100, 0, 30)
-botao.Position = UDim2.new(0.5, -50, 0, 95)
-botao.Text = "ATIVAR"
-botao.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-botao.Parent = frame
-
--- Verifica se está na tela certa antes de clicar
-local function verificarTelaReroll()
-    local windows = playerGui:FindFirstChild("Windows")
-    if not windows then return false, "Janela Windows não encontrada" end
+-- Função que NÃO usa .Text em ImageButton
+function clicarReroll()
+    local traits = player.PlayerGui:FindFirstChild("Windows") and player.PlayerGui.Windows:FindFirstChild("Traits")
+    if not traits then return false end
     
-    local traits = windows:FindFirstChild("Traits")
-    if not traits then return false, "Janela Traits não encontrada - Abra a janela de Traits primeiro!" end
-    
-    local rerollBtn = nil
-    for _, btn in ipairs(traits:GetDescendants()) do
-        if btn:IsA("TextButton") and btn.Text:lower():find("reroll") then
-            rerollBtn = btn
-            break
+    -- Procura SOMENTE pelo nome (sem verificar texto)
+    for _, botao in ipairs(traits:GetDescendants()) do
+        if (botao:IsA("ImageButton") or botao:IsA("TextButton")) and botao.Name and botao.Name:lower() == "reroll" then
+            if botao.Visible then
+                botao.MouseButton1Click:Fire()
+                return true
+            end
         end
     end
-    
-    if not rerollBtn then return false, "Botão Reroll não encontrado" end
-    return true, rerollBtn
+    return false
 end
 
--- Função segura de reroll
-local function fazerReroll()
-    local sucesso, resultado = verificarTelaReroll()
-    
-    if not sucesso then
-        warn("⚠️ " .. resultado)
-        return false
-    end
-    
-    local rerollBtn = resultado
-    
-    -- Verifica se o botão está visível e habilitado
-    if not rerollBtn.Visible then
-        warn("⚠️ Botão Reroll não está visível")
-        return false
-    end
-    
-    print("✅ Reroll encontrado! Executando...")
-    rerollBtn.MouseButton1Click:Fire()
-    
-    -- Aguarda o reroll acontecer
-    task.wait(2)
-    
-    return true
-end
-
--- Loop principal
-local function loopReroll()
+function loop()
     while ativo do
         status.Text = "🔄 PROCURANDO..."
-        status.TextColor3 = Color3.fromRGB(255, 255, 0)
-        
-        local sucesso = fazerReroll()
-        
-        if sucesso then
+        if clicarReroll() then
             rerolls = rerolls + 1
-            contador.Text = "Rerolls: " .. rerolls
-            
-            status.Text = "⏳ REJOIN EM 3s..."
-            task.wait(3)
-            
-            -- Teleporta
-            TeleportService:Teleport(game.PlaceId, player)
-            break -- Sai do loop pois vai teleportar
-        else
-            status.Text = "❌ ERRO - Abra a janela Traits!"
-            status.TextColor3 = Color3.fromRGB(255, 0, 0)
+            count.Text = "Rerolls: " .. rerolls
+            status.Text = "✅ REJOIN..."
             task.wait(2)
-            ativo = false
-            status.Text = "❌ INATIVO"
-            botao.Text = "ATIVAR"
-            botao.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            game:GetService("TeleportService"):Teleport(game.PlaceId, player)
+            break
+        else
+            status.Text = "❌ Selecione unidade!"
+            task.wait(2)
         end
     end
 end
 
--- Controles
-botao.MouseButton1Click:Connect(function()
+btn.MouseButton1Click:Connect(function()
+    ativo = not ativo
     if ativo then
-        ativo = false
-        status.Text = "❌ INATIVO"
-        status.TextColor3 = Color3.fromRGB(255, 0, 0)
-        botao.Text = "ATIVAR"
-        botao.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        status.Text = "✅ ATIVO"
+        status.TextColor3 = Color3.fromRGB(0,255,0)
+        btn.Text = "PARAR"
+        loop()
     else
-        -- Verifica se está na tela certa antes de ativar
-        local sucesso, msg = verificarTelaReroll()
-        if sucesso then
-            ativo = true
-            status.Text = "✅ ATIVO"
-            status.TextColor3 = Color3.fromRGB(0, 255, 0)
-            botao.Text = "DESATIVAR"
-            botao.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            loopReroll()
-        else
-            status.Text = "⚠️ " .. msg
-            status.TextColor3 = Color3.fromRGB(255, 165, 0)
-            task.wait(2)
-            status.Text = "❌ INATIVO"
-            status.TextColor3 = Color3.fromRGB(255, 0, 0)
-        end
+        status.Text = "❌ INATIVO"
+        status.TextColor3 = Color3.fromRGB(255,0,0)
+        btn.Text = "ATIVAR"
     end
 end)
 
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.E then
-        botao.MouseButton1Click:Fire()
-    end
-end)
-
-print("✅ SCRIPT SEGURO CARREGADO!")
-print("📌 IMPORTANTE: Abra a janela de TRAITS antes de ativar!")
+print("✅ Script pronto! Só selecionar a unidade e ativar!")
