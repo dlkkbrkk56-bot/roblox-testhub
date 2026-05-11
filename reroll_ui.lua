@@ -1,5 +1,5 @@
 -- Anime Vanguards - Infinite Reroll com Interface Visual
--- Script completo com GUI bonita
+-- SCRIPT CORRIGIDO
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -17,6 +17,8 @@ local REROLL_SPEED = 0.5
 local scriptGui = nil
 local statusLabel = nil
 local counterLabel = nil
+local toggleButton = nil
+local rerollCoroutine = nil
 
 -- ========== FUNÇÃO PARA CRIAR INTERFACE ==========
 local function createInterface()
@@ -73,7 +75,7 @@ local function createInterface()
     counterLabel.Parent = mainFrame
     
     -- Botão ON/OFF
-    local toggleButton = Instance.new("TextButton")
+    toggleButton = Instance.new("TextButton")
     toggleButton.Name = "ToggleButton"
     toggleButton.Size = UDim2.new(1, -10, 0, 35)
     toggleButton.Position = UDim2.new(0, 5, 0, 95)
@@ -100,6 +102,13 @@ local function createInterface()
     toggleButton.MouseButton1Click:Connect(function()
         IS_ACTIVE = not IS_ACTIVE
         updateUI()
+        
+        if IS_ACTIVE then
+            if rerollCoroutine then
+                task.cancel(rerollCoroutine)
+            end
+            rerollCoroutine = task.spawn(infiniteRerollWithRejoin)
+        end
     end)
     
     scriptGui = screenGui
@@ -112,13 +121,17 @@ function updateUI()
         if IS_ACTIVE then
             statusLabel.TextColor3 = Color3.fromRGB(50, 200, 50)
             statusLabel.Text = "✅ ATIVO"
-            toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-            toggleButton.Text = "DESLIGAR SCRIPT"
+            if toggleButton then
+                toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+                toggleButton.Text = "DESLIGAR SCRIPT"
+            end
         else
             statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
             statusLabel.Text = "⛔ INATIVO"
-            toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-            toggleButton.Text = "LIGAR SCRIPT"
+            if toggleButton then
+                toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+                toggleButton.Text = "LIGAR SCRIPT"
+            end
         end
     end
     
@@ -129,51 +142,60 @@ end
 
 -- ========== FUNÇÃO PARA CLICAR NO REROLL ==========
 local function clickRerollButton()
-    local windows = playerGui:FindFirstChild("Windows")
-    if not windows then return false end
-    
-    local crafting = windows:FindFirstChild("Crafting")
-    if not crafting then return false end
-    
-    local holder = crafting:FindFirstChild("Holder")
-    if not holder then return false end
-    
-    local rerollButton = holder:FindFirstChild("Reroll")
-    if not rerollButton then
-        for _, child in ipairs(holder:GetDescendants()) do
-            if child:IsA("TextButton") and child.Text == "Reroll" then
-                rerollButton = child
-                break
+    local success, result = pcall(function()
+        local windows = playerGui:FindFirstChild("Windows")
+        if not windows then return false end
+        
+        local crafting = windows:FindFirstChild("Crafting")
+        if not crafting then return false end
+        
+        local holder = crafting:FindFirstChild("Holder")
+        if not holder then return false end
+        
+        local rerollButton = holder:FindFirstChild("Reroll")
+        if not rerollButton then
+            for _, child in ipairs(holder:GetDescendants()) do
+                if child:IsA("TextButton") and child.Text == "Reroll" then
+                    rerollButton = child
+                    break
+                end
             end
         end
-    end
+        
+        if not rerollButton or not rerollButton.Visible then
+            return false
+        end
+        
+        rerollButton.MouseButton1Click:Fire()
+        return true
+    end)
     
-    if not rerollButton or not rerollButton.Visible then
+    if success then
+        return result or false
+    else
         return false
     end
-    
-    rerollButton.MouseButton1Click:Fire()
-    return true
 end
 
--- ========== FUNÇÃO PARA REJOIN ==========
+-- ========== FUNÇÃO PARA REJOIN (CORRIGIDA) ==========
 local function rejoinGame()
-    wait(1)
+    task.wait(1)  -- Usando task.wait ao invés de wait
     local placeId = game.PlaceId
-    Players:LeaveGame()
-    wait(3)
     TeleportService:Teleport(placeId, player)
 end
 
--- ========== LOOP INFINITO ==========
+-- ========== LOOP INFINITO (CORRIGIDO) ==========
 local function infiniteRerollWithRejoin()
     while IS_ACTIVE do
-        if clickRerollButton() then
+        local clicked = clickRerollButton()
+        
+        if clicked then
             REROLL_COUNT = REROLL_COUNT + 1
             updateUI()
             rejoinGame()
-            wait(15)
+            task.wait(15)  -- Usando task.wait
         else
+            print("❌ Botão Reroll não encontrado!")
             IS_ACTIVE = false
             updateUI()
             break
@@ -190,7 +212,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         updateUI()
         
         if IS_ACTIVE then
-            infiniteRerollWithRejoin()
+            if rerollCoroutine then
+                task.cancel(rerollCoroutine)
+            end
+            rerollCoroutine = task.spawn(infiniteRerollWithRejoin)
         end
     end
 end)
