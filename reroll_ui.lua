@@ -1,63 +1,59 @@
--- HOOPSMASTER V5 - CORRIGIDO (SERVIDOR PRIVADO)
+-- HOOPSMASTER V6 - SÓ ARREMESSO (SEM TP EM PLAYERS)
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- ========== VARIÁVEIS ==========
 local ativo = false
 
--- ========== GUI ==========
+-- GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "HoopsDemon"
+screenGui.Name = "HoopsOnly"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 320, 0, 180)
-frame.Position = UDim2.new(0.5, -160, 0.5, -90)
+frame.Size = UDim2.new(0, 280, 0, 160)
+frame.Position = UDim2.new(0.5, -140, 0.5, -80)
 frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
-frame.BorderSizePixel = 3
-frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 100, 50)
 frame.Active = true
 frame.Draggable = true
 frame.Parent = screenGui
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 50)
-title.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-title.Text = "🔥 HOOPS DEMON V5 🔥"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Size = UDim2.new(1, 0, 0, 45)
+title.BackgroundColor3 = Color3.fromRGB(30, 40, 80)
+title.Text = "🏀 HOOPS ONLY 🏀"
+title.TextColor3 = Color3.fromRGB(255, 215, 0)
 title.TextSize = 18
 title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
 local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -20, 0, 40)
-statusText.Position = UDim2.new(0, 10, 0, 60)
+statusText.Size = UDim2.new(1, -20, 0, 35)
+statusText.Position = UDim2.new(0, 10, 0, 55)
 statusText.Text = "⚡ DESATIVADO"
-statusText.TextColor3 = Color3.fromRGB(255, 0, 0)
+statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
 statusText.TextSize = 14
 statusText.Font = Enum.Font.GothamBold
 statusText.Parent = frame
 
 local btnAtivar = Instance.new("TextButton")
-btnAtivar.Size = UDim2.new(0, 200, 0, 45)
-btnAtivar.Position = UDim2.new(0.5, -100, 0, 115)
-btnAtivar.Text = "🔴 ATIVAR 🔴"
-btnAtivar.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+btnAtivar.Size = UDim2.new(0, 180, 0, 40)
+btnAtivar.Position = UDim2.new(0.5, -90, 0, 105)
+btnAtivar.Text = "🏀 ATIVAR"
+btnAtivar.BackgroundColor3 = Color3.fromRGB(255, 80, 40)
 btnAtivar.TextColor3 = Color3.fromRGB(255, 255, 255)
-btnAtivar.TextSize = 16
+btnAtivar.TextSize = 14
 btnAtivar.Font = Enum.Font.GothamBold
 btnAtivar.Parent = frame
 
--- ========== FUNÇÕES CORRIGIDAS ==========
-
--- Só encontra a cesta adversária (ignora NPC)
+-- Só encontra a cesta adversária
 local function encontrarCesta()
     for _, part in ipairs(workspace:GetDescendants()) do
         if part:IsA("BasePart") and part.Name:lower():find("hoop") then
-            -- Tenta identificar cesta adversária (azul/vermelho)
             if part.BrickColor and (part.BrickColor.Name:find("blue") or part.BrickColor.Name == "Really blue") then
                 return part
             end
@@ -66,125 +62,49 @@ local function encontrarCesta()
     return nil
 end
 
--- Só encontra jogadores de verdade (ignora NPC)
-local function encontrarJogadores()
-    local jogadores = {}
-    for _, p in ipairs(game.Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            -- Ignora NPC (NPC não tem PlayerGui)
-            if p:FindFirstChild("PlayerGui") then
-                table.insert(jogadores, p)
-            end
-        end
-    end
-    return jogadores
-end
-
--- Teleporta pra cesta e arremessa
+-- Arremessa sem TP
 local function arremessar()
     local cesta = encontrarCesta()
-    if cesta and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(cesta.Position + Vector3.new(0, 3, 0))
-        task.wait(0.05)
-        mouse.Button1Down()
-        task.wait(0.05)
-        mouse.Button1Up()
-        statusText.Text = "🏀 ARREMESSO!"
-        return true
-    end
-    return false
-end
-
--- Rouba do jogador mais próximo
-local function roubar()
-    local alvo = nil
-    local menorDist = math.huge
+    if not cesta then return end
     
-    for _, enemy in ipairs(encontrarJogadores()) do
-        if enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = (player.Character.HumanoidRootPart.Position - enemy.Character.HumanoidRootPart.Position).Magnitude
-            if dist < menorDist and dist < 30 then
-                menorDist = dist
-                alvo = enemy
-            end
-        end
-    end
-    
-    if alvo and alvo.Character then
-        -- Teleporta pra trás do oponente
-        local enemyPos = alvo.Character.HumanoidRootPart.Position
-        local behindPos = enemyPos - (alvo.Character.HumanoidRootPart.CFrame.LookVector * 4)
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(behindPos)
-        
-        -- Tenta pegar a bola (se existir)
-        for _, item in ipairs(workspace:GetDescendants()) do
-            if item:IsA("BasePart") and (item.Name:lower():find("ball") or item.Name:lower():find("bola")) then
-                if item:FindFirstChild("Handle") then
-                    item.CFrame = player.Character.HumanoidRootPart.CFrame
-                end
-            end
-        end
-        statusText.Text = "🤚 ROUBOU!"
-        return true
-    end
-    return false
-end
-
--- Drible errático
-local function driblar()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local randomDir = Vector3.new(math.random(-15, 15), 0, math.random(-15, 15))
-        local newPos = player.Character.HumanoidRootPart.Position + randomDir
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(newPos)
-        statusText.Text = "💫 DRIBLE"
+        -- Só mira na cesta (não teleporta)
+        local playerPos = player.Character.HumanoidRootPart.Position
+        local lookAt = CFrame.lookAt(playerPos, cesta.Position + Vector3.new(0, 2, 0))
+        player.Character.HumanoidRootPart.CFrame = lookAt
+        
+        -- Arremessa
+        mouse.Button1Down()
+        task.wait(0.3)
+        mouse.Button1Up()
+        
+        statusText.Text = "🏀 ARREMESSOU!"
     end
 end
 
--- Bloqueia arremesso
-local function bloquear()
-    for _, enemy in ipairs(encontrarJogadores()) do
-        if enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = (player.Character.HumanoidRootPart.Position - enemy.Character.HumanoidRootPart.Position).Magnitude
-            if dist < 15 then
-                -- Teleporta na frente
-                local enemyPos = enemy.Character.HumanoidRootPart.Position
-                local blockPos = enemyPos + (enemy.Character.HumanoidRootPart.CFrame.LookVector * -3)
-                player.Character.HumanoidRootPart.CFrame = CFrame.new(blockPos)
-                statusText.Text = "🛡️ BLOQUEIOU!"
-                return true
-            end
-        end
-    end
-    return false
-end
-
--- ========== LOOP DEMON ==========
-local function loopDemon()
+-- Loop
+local function loop()
     while ativo do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            arremessar()
-            roubar()
-            driblar()
-            bloquear()
-        end
+        arremessar()
+        task.wait(0.5)
         RunService.RenderStepped:Wait()
     end
 end
 
--- ========== ATIVAR ==========
+-- Ativar
 local function alternar()
     ativo = not ativo
     if ativo then
-        statusText.Text = "🔥 ATIVADO 🔥"
+        statusText.Text = "🏀 ATIVADO"
         statusText.TextColor3 = Color3.fromRGB(0, 255, 0)
         btnAtivar.Text = "⏹️ DESATIVAR"
-        btnAtivar.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-        loopDemon()
+        btnAtivar.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        loop()
     else
         statusText.Text = "⚡ DESATIVADO"
-        statusText.TextColor3 = Color3.fromRGB(255, 0, 0)
-        btnAtivar.Text = "🔴 ATIVAR 🔴"
-        btnAtivar.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+        btnAtivar.Text = "🏀 ATIVAR"
+        btnAtivar.BackgroundColor3 = Color3.fromRGB(255, 80, 40)
     end
 end
 
@@ -197,12 +117,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("=" .. string.rep("=", 60))
-print("🔥 HOOPS DEMON V5 - CORRIGIDO 🔥")
-print("✅ Só mira em JOGADORES (ignora NPC)")
-print("✅ Teleporta pra cesta e arremessa")
-print("✅ Rouba bola de verdade")
-print("✅ Drible errático")
-print("✅ Block OP")
-print("=" .. string.rep("=", 60))
-print("🔥 Pressione X para ATIVAR")
+print("=" .. string.rep("=", 50))
+print("🏀 HOOPS ONLY - SÓ ARREMESSO")
+print("✅ SEM TP em players")
+print("✅ Só mira e arremessa")
+print("=" .. string.rep("=", 50))
